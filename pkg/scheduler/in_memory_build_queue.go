@@ -13,7 +13,8 @@ import (
 
 	remoteexecution "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/bazelbuild/remote-apis/build/bazel/semver"
-	re_builder "github.com/buildbarn/bb-remote-execution/pkg/builder"
+
+	//re_builder "github.com/buildbarn/bb-remote-execution/pkg/builder"
 	"github.com/buildbarn/bb-remote-execution/pkg/proto/buildqueuestate"
 	"github.com/buildbarn/bb-remote-execution/pkg/proto/remoteworker"
 	"github.com/buildbarn/bb-remote-execution/pkg/scheduler/initialsizeclass"
@@ -2149,6 +2150,20 @@ func (t *task) getStage() remoteexecution.ExecutionStage_Value {
 	return remoteexecution.ExecutionStage_QUEUED
 }
 
+func GetResultAndGRPCCodeFromExecuteResponse(response *remoteexecution.ExecuteResponse) (result, grpcCode string) {
+	if c := status.FromProto(response.Status).Code(); c != codes.OK {
+		result = "Failure"
+		grpcCode = c.String()
+	} else if actionResult := response.Result; actionResult == nil {
+		result = "ActionResultMissing"
+	} else if actionResult.ExitCode == 0 {
+		result = "Success"
+	} else {
+		result = "NonZeroExitCode"
+	}
+	return
+}
+
 // complete execution of the task by registering the execution response.
 // This function wakes up any clients waiting on the task to complete.
 func (t *task) complete(bq *InMemoryBuildQueue, executeResponse *remoteexecution.ExecuteResponse, completedByWorker bool) {
@@ -2208,7 +2223,7 @@ func (t *task) complete(bq *InMemoryBuildQueue, executeResponse *remoteexecution
 	}
 	t.currentWorker.currentTask = nil
 	t.currentWorker = nil
-	result, grpcCode := re_builder.GetResultAndGRPCCodeFromExecuteResponse(executeResponse)
+	result, grpcCode := GetResultAndGRPCCodeFromExecuteResponse(executeResponse)
 	t.registerExecutingStageFinished(bq, result, grpcCode)
 
 	// Communicate the results to the initial size class learner,
