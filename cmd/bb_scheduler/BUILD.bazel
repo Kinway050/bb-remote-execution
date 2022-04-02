@@ -92,9 +92,15 @@ go_image(
     pure = "on",
     visibility = ["//visibility:public"],
 )
+go_image(
+    name = "bb_scheduler_container2",
+    embed = [":bb_scheduler_lib"],
+    pure = "on",
+    visibility = ["//visibility:public"],
+)
 
 container_push_official(
     name = "bb_scheduler_container_push",
     component = "bb-scheduler",
-    image = ":bb_scheduler_container",
+    image = ":bb_scheduler_container2",
 )
